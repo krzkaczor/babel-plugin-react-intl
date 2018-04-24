@@ -14,9 +14,7 @@ const COMPONENT_NAMES = [
     'FormattedHTMLMessage',
 ];
 
-const FUNCTION_NAMES = [
-    'defineMessages',
-];
+const FUNCTION_NAME = 'formatIntlMessage';
 
 const DESCRIPTOR_PROPS = new Set(['id', 'description', 'defaultMessage']);
 
@@ -117,12 +115,6 @@ export default function ({types: t}) {
 
     function storeMessage({id, description, defaultMessage}, path, state) {
         const {file, opts} = state;
-
-        if (!(id && defaultMessage)) {
-            throw path.buildCodeFrameError(
-                '[React Intl] Message Descriptors require an `id` and `defaultMessage`.'
-            );
-        }
 
         const messages = file.get(MESSAGES);
         if (messages.has(id)) {
@@ -251,27 +243,25 @@ export default function ({types: t}) {
                     // `<FormattedMessage id={dynamicId} />`, because it will be
                     // skipped here and extracted elsewhere. The descriptor will
                     // be extracted only if a `defaultMessage` prop exists.
-                    if (descriptor.defaultMessage) {
-                        // Evaluate the Message Descriptor values in a JSX
-                        // context, then store it.
-                        descriptor = evaluateMessageDescriptor(descriptor, {
-                            isJSXSource: true,
-                        });
+                    // Evaluate the Message Descriptor values in a JSX
+                    // context, then store it.
+                    descriptor = evaluateMessageDescriptor(descriptor, {
+                        isJSXSource: true,
+                    });
 
-                        storeMessage(descriptor, path, state);
+                    storeMessage(descriptor, path, state);
 
-                        // Remove description since it's not used at runtime.
-                        attributes.some((attr) => {
-                            const ketPath = attr.get('name');
-                            if (getMessageDescriptorKey(ketPath) === 'description') {
-                                attr.remove();
-                                return true;
-                            }
-                        });
+                    // Remove description since it's not used at runtime.
+                    attributes.some((attr) => {
+                        const ketPath = attr.get('name');
+                        if (getMessageDescriptorKey(ketPath) === 'description') {
+                            attr.remove();
+                            return true;
+                        }
+                    });
 
-                        // Tag the AST node so we don't try to extract it twice.
-                        tagAsExtracted(path);
-                    }
+                    // Tag the AST node so we don't try to extract it twice.
+                    tagAsExtracted(path);
                 }
             },
 
@@ -311,29 +301,31 @@ export default function ({types: t}) {
                     storeMessage(descriptor, messageObj, state);
 
                     // Remove description since it's not used at runtime.
-                    messageObj.replaceWith(t.objectExpression([
-                        t.objectProperty(
-                            t.stringLiteral('id'),
-                            t.stringLiteral(descriptor.id)
-                        ),
-                        t.objectProperty(
-                            t.stringLiteral('defaultMessage'),
-                            t.stringLiteral(descriptor.defaultMessage)
-                        ),
-                    ]));
+                    // messageObj.replaceWith(t.objectExpression([
+                    //     t.objectProperty(
+                    //         t.stringLiteral('id'),
+                    //         t.stringLiteral(descriptor.id)
+                    //     ),
+                    //     t.objectProperty(
+                    //         t.stringLiteral('defaultMessage'),
+                    //         t.stringLiteral(descriptor.defaultMessage)
+                    //     ),
+                    // ]));
 
                     // Tag the AST node so we don't try to extract it twice.
                     tagAsExtracted(messageObj);
                 }
 
-                if (referencesImport(callee, moduleSourceName, FUNCTION_NAMES)) {
-                    const messagesObj = path.get('arguments')[0];
+                if (callee.node.name === FUNCTION_NAME || (callee.node.property && callee.node.property.name === FUNCTION_NAME)) {
+                    const messageObj = path.get('arguments')[0];
+                    const value = messageObj.node.value;
 
-                    assertObjectExpression(messagesObj);
+                    if (wasExtracted(messageObj)) {
+                        return;
+                    }
 
-                    messagesObj.get('properties')
-                        .map((prop) => prop.get('value'))
-                        .forEach(processMessageObject);
+                    storeMessage({ id:value } , messageObj, state);
+                    tagAsExtracted(messageObj);
                 }
             },
         },
