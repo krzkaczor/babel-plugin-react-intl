@@ -22,10 +22,6 @@ const EXTRACTED = Symbol('ReactIntlExtracted');
 const MESSAGES  = Symbol('ReactIntlMessages');
 
 export default function ({types: t}) {
-    function getModuleSourceName(opts) {
-        return opts.moduleSourceName || 'react-intl';
-    }
-
     function evaluatePath(path) {
         const evaluated = path.evaluate();
         if (evaluated.confident) {
@@ -152,12 +148,12 @@ export default function ({types: t}) {
         messages.set(id, {id, description, defaultMessage, ...loc});
     }
 
-    function referencesImport(path, mod, importedNames) {
+    function referencesImport(path, importedNames) {
         if (!(path.isIdentifier() || path.isJSXIdentifier())) {
             return false;
         }
 
-        return importedNames.some((name) => path.referencesImport(mod, name));
+        return importedNames.some((name) => path.node.name === name);
     }
 
     function tagAsExtracted(path) {
@@ -212,10 +208,9 @@ export default function ({types: t}) {
                 }
 
                 const {file, opts} = state;
-                const moduleSourceName = getModuleSourceName(opts);
                 const name = path.get('name');
 
-                if (name.referencesImport(moduleSourceName, 'FormattedPlural')) {
+                if (name.referencesImport('FormattedPlural')) {
                     file.log.warn(
                         `[React Intl] Line ${path.node.loc.start.line}: ` +
                         'Default messages are not extracted from ' +
@@ -225,7 +220,7 @@ export default function ({types: t}) {
                     return;
                 }
 
-                if (referencesImport(name, moduleSourceName, COMPONENT_NAMES)) {
+                if (referencesImport(name, COMPONENT_NAMES)) {
                     const attributes = path.get('attributes')
                         .filter((attr) => attr.isJSXAttribute());
 
@@ -266,7 +261,6 @@ export default function ({types: t}) {
             },
 
             CallExpression(path, state) {
-                const moduleSourceName = getModuleSourceName(state.opts);
                 const callee = path.get('callee');
 
                 function assertObjectExpression(node) {
