@@ -263,17 +263,6 @@ export default function () {
             CallExpression(path, state) {
                 const callee = path.get('callee');
 
-                function assertObjectExpression(node) {
-                    if (!(node && node.isObjectExpression())) {
-                        throw path.buildCodeFrameError(
-                            `[React Intl] \`${callee.node.name}()\` must be ` +
-                            'called with an object expression with values ' +
-                            'that are React Intl Message Descriptors, also ' +
-                            'defined as object expressions.'
-                        );
-                    }
-                }
-
                 if (callee.node.name === FUNCTION_NAME || (callee.node.property && callee.node.property.name === FUNCTION_NAME)) {
                     const messageObj = path.get('arguments')[0];
                     const value = messageObj.node.value;
