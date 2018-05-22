@@ -21,7 +21,7 @@ const DESCRIPTOR_PROPS = new Set(['id', 'description', 'defaultMessage']);
 const EXTRACTED = Symbol('ReactIntlExtracted');
 const MESSAGES  = Symbol('ReactIntlMessages');
 
-export default function ({types: t}) {
+export default function () {
     function evaluatePath(path) {
         const evaluated = path.evaluate();
         if (evaluated.confident) {
@@ -207,7 +207,7 @@ export default function ({types: t}) {
                     return;
                 }
 
-                const {file, opts} = state;
+                const {file} = state;
                 const name = path.get('name');
 
                 if (name.referencesImport('FormattedPlural')) {
@@ -272,42 +272,6 @@ export default function ({types: t}) {
                             'defined as object expressions.'
                         );
                     }
-                }
-
-                function processMessageObject(messageObj) {
-                    assertObjectExpression(messageObj);
-
-                    if (wasExtracted(messageObj)) {
-                        return;
-                    }
-
-                    const properties = messageObj.get('properties');
-
-                    let descriptor = createMessageDescriptor(
-                        properties.map((prop) => [
-                            prop.get('key'),
-                            prop.get('value'),
-                        ])
-                    );
-
-                    // Evaluate the Message Descriptor values, then store it.
-                    descriptor = evaluateMessageDescriptor(descriptor);
-                    storeMessage(descriptor, messageObj, state);
-
-                    // Remove description since it's not used at runtime.
-                    // messageObj.replaceWith(t.objectExpression([
-                    //     t.objectProperty(
-                    //         t.stringLiteral('id'),
-                    //         t.stringLiteral(descriptor.id)
-                    //     ),
-                    //     t.objectProperty(
-                    //         t.stringLiteral('defaultMessage'),
-                    //         t.stringLiteral(descriptor.defaultMessage)
-                    //     ),
-                    // ]));
-
-                    // Tag the AST node so we don't try to extract it twice.
-                    tagAsExtracted(messageObj);
                 }
 
                 if (callee.node.name === FUNCTION_NAME || (callee.node.property && callee.node.property.name === FUNCTION_NAME)) {
